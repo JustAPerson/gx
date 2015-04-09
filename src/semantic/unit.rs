@@ -13,11 +13,13 @@ use frontend::tree;
 use msg;
 use semantic::*;
 use semantic::types::TypeRef;
+use semantic::func::Func;
 
 pub struct Unit<'a> {
     pub name:      String,
     pub units:     HashMap<String, Unit<'a>>,
     pub types:     HashMap<String, TypeRef<'a>>,
+    pub funcs:     HashMap<String, Func<'a>>,
     pub ns:        symbol::SymbolTable<'a>
 }
 
@@ -27,6 +29,7 @@ impl<'a> Unit<'a> {
             name:   name,
             units:  HashMap::new(),
             types:  HashMap::new(),
+            funcs:  HashMap::new(),
             ns:     symbol::SymbolTable::empty(),
         }
     }
@@ -46,6 +49,13 @@ impl<'a> Unit<'a> {
                     try!(TypeRef::from_tree(&typ.typ))
                 );
             },
+
+            tree::DeclBody::Func(ref func) => {
+                self.funcs.insert(
+                    func.name.clone(),
+                    try!(Func::from_tree(func)),
+                );
+            }
 
             _ => { }
         }
@@ -92,12 +102,15 @@ impl<'a> Unit<'a> {
 
 impl<'a> Dumpable for Unit<'a> {
     fn dump(&self, d: &mut DumpContext) {
-        d.push_str(&format!("unit {}", self.name)[..]);
+        d.push(format!("unit {}", self.name));
         for v in self.units.values() {
             v.dump(d);
         }
         for (k, v) in self.types.iter() {
             d.put_ln(format!("type {} = {:?}", k, v));
+        }
+        for v in self.funcs.values() {
+            v.dump(d);
         }
         d.pop();
     }
